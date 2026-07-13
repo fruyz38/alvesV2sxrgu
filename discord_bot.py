@@ -368,7 +368,7 @@ class MainMenuView(discord.ui.View):
     async def sorgu_paneli(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = KomutlarView()
         embed = discord.Embed(
-            title="📂 Sorgu Paneli",
+            title="📂Alves Sorgu Paneli",
             description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
@@ -536,6 +536,7 @@ async def start(interaction: discord.Interaction):
         description="Aşağıdaki butonlardan birini seçin:",
         color=discord.Color.blue()
     )
+    # HERKESE GÖRÜNÜR - ephemeral yok
     await interaction.response.send_message(embed=embed, view=view)
 
 @bot.tree.command(name="ping", description="Botun gecikme süresini göster")
