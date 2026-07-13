@@ -46,7 +46,7 @@ def ping():
 def run_web_server():
     app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
-# ============ API SORGULAMA (DÜZELTİLDİ) ============
+# ============ API SORGULAMA ============
 def api_sorgula(url):
     try:
         headers = {
@@ -65,215 +65,299 @@ def api_sorgula(url):
         return None
 
 # ============ MODAL'LAR ============
-class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
-    ad = discord.ui.TextInput(
-        label='Adınız',
-        placeholder='Ahmet',
+
+# --- TWITTER MODALLARI ---
+class TwitterUserModal(discord.ui.Modal, title='🐦 Twitter Kullanıcı Sorgu'):
+    kullanici = discord.ui.TextInput(
+        label='Kullanıcı Adı',
+        placeholder='abowie',
         required=True,
         max_length=50
     )
-    soyad = discord.ui.TextInput(
-        label='Soyadınız',
-        placeholder='Yılmaz',
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        kullanici = self.kullanici.value.strip()
+        url = f"https://ajanss.tr/api/twitter.php?type=user&q={urllib.parse.quote(kullanici)}"
+        data = api_sorgula(url)
+        
+        if data:
+            mesaj = "**🐦 Twitter Kullanıcı Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+
+class TwitterEmailModal(discord.ui.Modal, title='🐦 Twitter Mail Sorgu'):
+    email = discord.ui.TextInput(
+        label='E-posta Adresi',
+        placeholder='bowie_2000@yahoo.com',
+        required=True,
+        max_length=100
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        email = self.email.value.strip()
+        url = f"https://ajanss.tr/api/twitter.php?type=email&q={urllib.parse.quote(email)}"
+        data = api_sorgula(url)
+        
+        if data:
+            mesaj = "**🐦 Twitter Mail Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+
+class TwitterPassModal(discord.ui.Modal, title='🐦 Twitter Şifre Sorgu'):
+    sifre = discord.ui.TextInput(
+        label='Şifre',
+        placeholder='1234567y',
         required=True,
         max_length=50
     )
-    il = discord.ui.TextInput(
-        label='İl (Opsiyonel)',
-        placeholder='İstanbul veya boş bırakın',
-        required=False,
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        sifre = self.sifre.value.strip()
+        url = f"https://ajanss.tr/api/twitter.php?type=pass&q={urllib.parse.quote(sifre)}"
+        data = api_sorgula(url)
+        
+        if data:
+            mesaj = "**🐦 Twitter Şifre Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+
+# --- DISCORD MODALLARI ---
+class DiscordIDModal(discord.ui.Modal, title='💬 Discord ID Sorgu'):
+    discord_id = discord.ui.TextInput(
+        label='Discord ID',
+        placeholder='1006067526339399711',
+        required=True,
         max_length=30
     )
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
+        discord_id = self.discord_id.value.strip()
+        url = f"https://ajanss.tr/api/discordid.php?id={discord_id}"
+        data = api_sorgula(url)
         
-        ad = self.ad.value.strip()
-        soyad = self.soyad.value.strip()
-        il = self.il.value.strip() if self.il.value else ""
-        
-        ad_encoded = urllib.parse.quote(ad)
-        soyad_encoded = urllib.parse.quote(soyad)
-        
-        # DOĞRU URL'LER (sowixapi - düzeltildi)
-        urls = []
-        
-        if il:
-            il_encoded = urllib.parse.quote(il)
-            # Doğru yazım: sowixapi (sowiXAPI değil)
-            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
-            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyad.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
+        if data:
+            mesaj = "**💬 Discord ID Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
         else:
-            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}")
-            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyad.php?ad={ad_encoded}&soyad={soyad_encoded}")
-        
-        # Tüm URL'leri dene
-        for url in urls:
-            logger.info(f"Deneniyor: {url}")
-            data = api_sorgula(url)
-            
-            if data:
-                logger.info(f"Gelen data: {json.dumps(data, ensure_ascii=False)[:200]}")
-                
-                # data list olarak gelmiş
-                if isinstance(data, list) and len(data) > 0:
-                    kisi = data[0]
-                    mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
-                    for anahtar, deger in kisi.items():
-                        mesaj += f"**{anahtar}:** {deger}\n"
-                    await interaction.followup.send(mesaj, ephemeral=True)
-                    return
-                
-                # data dict olarak gelmiş ve içinde data anahtarı var
-                elif isinstance(data, dict) and data.get("data"):
-                    veri_listesi = data.get("data")
-                    if isinstance(veri_listesi, list) and len(veri_listesi) > 0:
-                        kisi = veri_listesi[0]
-                        mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
-                        for anahtar, deger in kisi.items():
-                            mesaj += f"**{anahtar}:** {deger}\n"
-                        await interaction.followup.send(mesaj, ephemeral=True)
-                        return
-                
-                # data dict olarak gelmiş ve success true
-                elif isinstance(data, dict) and data.get("success") and data.get("Data"):
-                    veri_listesi = data.get("Data")
-                    if isinstance(veri_listesi, list) and len(veri_listesi) > 0:
-                        kisi = veri_listesi[0]
-                        mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
-                        for anahtar, deger in kisi.items():
-                            mesaj += f"**{anahtar}:** {deger}\n"
-                        await interaction.followup.send(mesaj, ephemeral=True)
-                        return
-        
-        # Hiçbir URL çalışmadı
-        await interaction.followup.send(
-            "❌ **Sonuç bulunamadı!**\n\n"
-            f"👤 Ad: {ad}\n"
-            f"👤 Soyad: {soyad}\n"
-            f"📍 İl: {il if il else 'Belirtilmedi'}\n\n"
-            "⚠️ API'ye bağlanılamadı. Lütfen daha sonra tekrar deneyin.",
-            ephemeral=True
-        )
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
 
-class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
-    tc = discord.ui.TextInput(
-        label='TC Kimlik Numarası',
-        placeholder='12345678901',
+# --- INSTAGRAM MODALLARI ---
+class InstaUserModal(discord.ui.Modal, title='📸 Instagram Kullanıcı Sorgu'):
+    kullanici = discord.ui.TextInput(
+        label='Kullanıcı Adı',
+        placeholder='pompomiller',
         required=True,
-        max_length=11,
-        min_length=11
+        max_length=50
     )
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        tc = self.tc.value.strip()
-        
-        if not tc.isdigit() or len(tc) != 11:
-            await interaction.followup.send("❌ Geçerli bir 11 haneli TC giriniz.", ephemeral=True)
-            return
-        
-        # DOĞRU URL'LER
-        urls = [
-            f"https://api.hexnox.pro/sowixapi/tcpro.php?tc={tc}",
-            f"https://api.hexnox.pro/api/tcpro.php?tc={tc}"
-        ]
-        
-        for url in urls:
-            logger.info(f"TC Pro deneniyor: {url}")
-            data = api_sorgula(url)
-            
-            if data:
-                logger.info(f"TC Pro data: {json.dumps(data, ensure_ascii=False)[:200]}")
-                
-                if isinstance(data, dict) and data.get("data"):
-                    icerik = data.get("data")
-                    if isinstance(icerik, dict):
-                        mesaj = "**✅ TC Pro Sorgu Sonucu**\n\n"
-                        for anahtar, deger in icerik.items():
-                            mesaj += f"**{anahtar}:** {deger}\n"
-                        await interaction.followup.send(mesaj, ephemeral=True)
-                        return
-                elif isinstance(data, dict):
-                    mesaj = "**✅ TC Pro Sorgu Sonucu**\n\n"
-                    for anahtar, deger in data.items():
-                        mesaj += f"**{anahtar}:** {deger}\n"
-                    await interaction.followup.send(mesaj, ephemeral=True)
-                    return
-        
-        await interaction.followup.send("❌ TC bulunamadı. Lütfen TC'nizi kontrol edin.", ephemeral=True)
-
-class GSMModal(discord.ui.Modal, title='📱 GSM Detay Sorgu'):
-    gsm = discord.ui.TextInput(
-        label='GSM Numarası',
-        placeholder='5365865294 (Başında 0 olmadan)',
-        required=True,
-        max_length=10,
-        min_length=10
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        gsm = self.gsm.value.strip()
-        
-        if not gsm.isdigit() or len(gsm) != 10:
-            await interaction.followup.send("❌ Geçerli bir GSM numarası giriniz.", ephemeral=True)
-            return
-        
-        url = f"https://api.hexnox.pro/sowixapi/gsmdetay.php?gsm={gsm}"
-        logger.info(f"GSM detay sorgu URL: {url}")
+        kullanici = self.kullanici.value.strip()
+        url = f"https://ajanss.tr/api/instagram.php?type=user&q={urllib.parse.quote(kullanici)}"
         data = api_sorgula(url)
         
-        if data and data.get("success") and data.get("Data"):
-            d = data.get("Data")
-            if isinstance(d, dict):
-                mesaj = "**📱 GSM Detay Sorgu Sonucu**\n\n"
-                mesaj += f"**Ad Soyad:** {d.get('AD', 'Yok')} {d.get('SOYAD', 'Yok')}\n"
-                mesaj += f"**TC:** {d.get('TC', 'Yok')}\n"
-                mesaj += f"**Doğum Tarihi:** {d.get('DOGUMTARIHI', 'Yok')}\n"
-                mesaj += f"**Adres:** {d.get('Ikametgah', 'Yok')}\n"
-                mesaj += f"**Anne Adı:** {d.get('ANNEADI', 'Yok')}\n"
-                mesaj += f"**Baba Adı:** {d.get('BABAADI', 'Yok')}\n"
-                mesaj += f"**Cinsiyet:** {d.get('CINSIYET', 'Yok')}\n"
-                await interaction.followup.send(mesaj, ephemeral=True)
-                return
-        
-        await interaction.followup.send("❌ Sonuç bulunamadı. Lütfen GSM numarasını kontrol edin.", ephemeral=True)
+        if data:
+            mesaj = "**📸 Instagram Kullanıcı Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
 
-class PlakaModal(discord.ui.Modal, title='🚗 Plaka Sorgu'):
-    plaka = discord.ui.TextInput(
-        label='Plaka Numarası',
-        placeholder='34KG4978',
+class InstaEmailModal(discord.ui.Modal, title='📸 Instagram Mail Sorgu'):
+    email = discord.ui.TextInput(
+        label='E-posta Adresi',
+        placeholder='pompopr@gmail.com',
         required=True,
-        max_length=8
+        max_length=100
     )
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        plaka = self.plaka.value.strip().upper()
-        
-        if not plaka.isalnum() or len(plaka) > 8:
-            await interaction.followup.send("❌ Geçerli bir plaka giriniz.", ephemeral=True)
-            return
-        
-        url = f"https://quantrexsystems.alwaysdata.net/diger/plaka.php?plaka={plaka}"
-        logger.info(f"Plaka sorgu URL: {url}")
+        email = self.email.value.strip()
+        url = f"https://ajanss.tr/api/instagram.php?type=email&q={urllib.parse.quote(email)}"
         data = api_sorgula(url)
         
-        if data and data.get("success") and data.get("Data"):
-            d = data.get("Data")
-            if isinstance(d, dict):
-                mesaj = "**🚗 Plaka Sorgu Sonucu**\n\n"
-                mesaj += f"**Plaka:** {d.get('plaka', 'N/A')}\n"
-                mesaj += f"**Borç Türü:** {d.get('borcTuru', 'N/A')}\n"
-                mesaj += f"**İsim Soyisim:** {d.get('Isimsoyisim', 'N/A')}\n"
-                mesaj += f"**T.C.:** {d.get('Tc', 'N/A')}\n"
-                mesaj += f"**Yazılan Ceza:** {d.get('YazilanCeza', 'N/A')}\n"
-                mesaj += f"**Toplam Ceza:** {d.get('ToplamCeza', 'N/A')}\n"
-                await interaction.followup.send(mesaj, ephemeral=True)
-                return
+        if data:
+            mesaj = "**📸 Instagram Mail Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+
+class InstaIDModal(discord.ui.Modal, title='📸 Instagram ID Sorgu'):
+    insta_id = discord.ui.TextInput(
+        label='Instagram ID',
+        placeholder='581959613',
+        required=True,
+        max_length=30
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        insta_id = self.insta_id.value.strip()
+        url = f"https://ajanss.tr/api/instagram.php?type=id&q={insta_id}"
+        data = api_sorgula(url)
         
-        await interaction.followup.send("❌ Veri bulunamadı. Lütfen plakayı kontrol edin.", ephemeral=True)
+        if data:
+            mesaj = "**📸 Instagram ID Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+
+class InstaPhoneModal(discord.ui.Modal, title='📸 Instagram Telefon Sorgu'):
+    telefon = discord.ui.TextInput(
+        label='Telefon Numarası',
+        placeholder='17814729662',
+        required=True,
+        max_length=20
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        telefon = self.telefon.value.strip()
+        url = f"https://ajanss.tr/api/instagram.php?type=phone&q={telefon}"
+        data = api_sorgula(url)
+        
+        if data:
+            mesaj = "**📸 Instagram Telefon Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+
+class InstaNameModal(discord.ui.Modal, title='📸 Instagram İsim Sorgu'):
+    isim = discord.ui.TextInput(
+        label='İsim',
+        placeholder='Miller',
+        required=True,
+        max_length=50
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        isim = self.isim.value.strip()
+        url = f"https://ajanss.tr/api/instagram.php?type=name&q={urllib.parse.quote(isim)}"
+        data = api_sorgula(url)
+        
+        if data:
+            mesaj = "**📸 Instagram İsim Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+
+class InstaAddressModal(discord.ui.Modal, title='📸 Instagram Adres Sorgu'):
+    adres = discord.ui.TextInput(
+        label='Adres',
+        placeholder='Los Angeles',
+        required=True,
+        max_length=100
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        adres = self.adres.value.strip()
+        url = f"https://ajanss.tr/api/instagram.php?type=address&q={urllib.parse.quote(adres)}"
+        data = api_sorgula(url)
+        
+        if data:
+            mesaj = "**📸 Instagram Adres Sorgu Sonucu**\n\n"
+            if isinstance(data, dict):
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+            elif isinstance(data, list) and len(data) > 0:
+                for item in data:
+                    if isinstance(item, dict):
+                        for anahtar, deger in item.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        mesaj += "\n"
+            await interaction.followup.send(mesaj, ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
 
 # ============ VIEW'LAR ============
 class MainMenuView(discord.ui.View):
@@ -294,35 +378,46 @@ class MainMenuView(discord.ui.View):
     async def bilgi_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
             title="ℹ️ Bot Bilgisi",
-            description="Bu bot çeşitli sorgulama işlemleri yapmanızı sağlar.",
+            description="Sorgu botu ile Twitter, Discord ve Instagram sorgulamaları yapabilirsiniz.",
             color=discord.Color.green()
         )
         embed.add_field(name="👤 Yapımcı", value="@alves0000", inline=True)
+        embed.add_field(name="📌 Sürüm", value="2.0.0", inline=True)
         await interaction.response.edit_message(embed=embed, view=None)
 
 class KomutlarView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
     
-    @discord.ui.button(label="🆓 Free Komutlar", style=discord.ButtonStyle.success, custom_id="free")
-    async def free_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = FreeKomutlarView()
+    @discord.ui.button(label="🐦 Twitter", style=discord.ButtonStyle.primary, custom_id="twitter")
+    async def twitter_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = TwitterView()
         embed = discord.Embed(
-            title="🆓 Free Komutlar Menüsü",
-            description="Aşağıdaki sorgulama işlemlerinden birini seçin:",
-            color=discord.Color.green()
+            title="🐦 Twitter Sorgu Menüsü",
+            description="Sorgu türünü seçin:",
+            color=discord.Color.blue()
         )
         await interaction.response.edit_message(embed=embed, view=view)
     
-    @discord.ui.button(label="💎 Premium Komutlar", style=discord.ButtonStyle.danger, custom_id="premium")
-    async def premium_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="💬 Discord", style=discord.ButtonStyle.primary, custom_id="discord")
+    async def discord_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = DiscordView()
         embed = discord.Embed(
-            title="💎 Premium Komutlar",
-            description="Premium panel satın alımları için yetkiliyle iletişime geçin.",
-            color=discord.Color.gold()
+            title="💬 Discord Sorgu Menüsü",
+            description="Sorgu türünü seçin:",
+            color=discord.Color.blue()
         )
-        embed.add_field(name="📞 İletişim", value="@alves0000", inline=False)
-        await interaction.response.edit_message(embed=embed, view=None)
+        await interaction.response.edit_message(embed=embed, view=view)
+    
+    @discord.ui.button(label="📸 Instagram", style=discord.ButtonStyle.primary, custom_id="instagram")
+    async def instagram_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = InstagramView()
+        embed = discord.Embed(
+            title="📸 Instagram Sorgu Menüsü",
+            description="Sorgu türünü seçin:",
+            color=discord.Color.blue()
+        )
+        await interaction.response.edit_message(embed=embed, view=view)
     
     @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_ana")
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -333,36 +428,75 @@ class KomutlarView(discord.ui.View):
         )
         await interaction.response.edit_message(embed=embed, view=MainMenuView())
 
-class FreeKomutlarView(discord.ui.View):
+class TwitterView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
     
-    @discord.ui.button(label="🧾 Ad Soyad Sorgu", style=discord.ButtonStyle.secondary, custom_id="adsoyad")
-    async def adsoyad_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(AdSoyadModal())
+    @discord.ui.button(label="👤 Kullanıcı Adı", style=discord.ButtonStyle.secondary, custom_id="twitter_user")
+    async def twitter_user(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TwitterUserModal())
     
-    @discord.ui.button(label="🆔 TC Pro Sorgu", style=discord.ButtonStyle.secondary, custom_id="tcpro")
-    async def tcpro_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(TCProModal())
+    @discord.ui.button(label="📧 Mail", style=discord.ButtonStyle.secondary, custom_id="twitter_email")
+    async def twitter_email(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TwitterEmailModal())
     
-    @discord.ui.button(label="📱 GSM Detay", style=discord.ButtonStyle.secondary, custom_id="gsmdetay")
-    async def gsmdetay_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(GSMModal())
+    @discord.ui.button(label="🔑 Şifre", style=discord.ButtonStyle.secondary, custom_id="twitter_pass")
+    async def twitter_pass(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TwitterPassModal())
     
-    @discord.ui.button(label="🚗 Plaka Sorgu", style=discord.ButtonStyle.secondary, custom_id="plaka")
-    async def plaka_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(PlakaModal())
-    
-    @discord.ui.button(label="📞 İletişim", style=discord.ButtonStyle.secondary, custom_id="iletisim")
-    async def iletisim_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_komutlar")
+    async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
-            title="📞 İletişim Bilgileri",
-            description="Bot yapımcısı ile iletişime geçin:",
+            title="⚙️ Komut Türü Seçin",
+            description="Hangi tür komutları kullanmak istersiniz?",
             color=discord.Color.blue()
         )
-        embed.add_field(name="👤 Yapımcı", value="@alves0000", inline=False)
-        embed.add_field(name="📱 Telegram", value="https://t.me/alves0000", inline=True)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.edit_message(embed=embed, view=KomutlarView())
+
+class DiscordView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    @discord.ui.button(label="🆔 ID Sorgu", style=discord.ButtonStyle.secondary, custom_id="discord_id")
+    async def discord_id(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(DiscordIDModal())
+    
+    @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_komutlar")
+    async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="⚙️ Komut Türü Seçin",
+            description="Hangi tür komutları kullanmak istersiniz?",
+            color=discord.Color.blue()
+        )
+        await interaction.response.edit_message(embed=embed, view=KomutlarView())
+
+class InstagramView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    @discord.ui.button(label="👤 Kullanıcı Adı", style=discord.ButtonStyle.secondary, custom_id="insta_user")
+    async def insta_user(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(InstaUserModal())
+    
+    @discord.ui.button(label="📧 Mail", style=discord.ButtonStyle.secondary, custom_id="insta_email")
+    async def insta_email(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(InstaEmailModal())
+    
+    @discord.ui.button(label="🆔 ID", style=discord.ButtonStyle.secondary, custom_id="insta_id")
+    async def insta_id(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(InstaIDModal())
+    
+    @discord.ui.button(label="📱 Telefon", style=discord.ButtonStyle.secondary, custom_id="insta_phone")
+    async def insta_phone(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(InstaPhoneModal())
+    
+    @discord.ui.button(label="📝 İsim", style=discord.ButtonStyle.secondary, custom_id="insta_name")
+    async def insta_name(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(InstaNameModal())
+    
+    @discord.ui.button(label="📍 Adres", style=discord.ButtonStyle.secondary, custom_id="insta_address")
+    async def insta_address(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(InstaAddressModal())
     
     @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_komutlar")
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
