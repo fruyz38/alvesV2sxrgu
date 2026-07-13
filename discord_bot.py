@@ -368,7 +368,7 @@ class MainMenuView(discord.ui.View):
     async def sorgu_paneli(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = KomutlarView()
         embed = discord.Embed(
-            title="📂Alves Sorgu Paneli",
+            title="📂 Alves Sorgu Paneli",
             description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
@@ -449,7 +449,7 @@ class TwitterView(discord.ui.View):
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = KomutlarView()
         embed = discord.Embed(
-            title="📂 Sorgu Paneli",
+            title="Alves Sorgu Paneli",
             description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
@@ -467,7 +467,7 @@ class DiscordView(discord.ui.View):
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = KomutlarView()
         embed = discord.Embed(
-            title="📂 Sorgu Paneli",
+            title="📂Alves Sorgu Paneli",
             description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
@@ -505,7 +505,7 @@ class InstagramView(discord.ui.View):
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = KomutlarView()
         embed = discord.Embed(
-            title="📂 Sorgu Paneli",
+            title="📂Alves Sorgu Paneli",
             description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
@@ -532,7 +532,7 @@ async def on_ready():
 async def start(interaction: discord.Interaction):
     view = MainMenuView()
     embed = discord.Embed(
-        title="👋 Hoş Geldiniz!",
+        title="👋Alves Sorgu Paneline Hoş Geldiniz!",
         description="Aşağıdaki butonlardan birini seçin:",
         color=discord.Color.blue()
     )
