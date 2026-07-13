@@ -7,7 +7,6 @@ import os
 import logging
 import threading
 import time
-from typing import Optional
 from flask import Flask, jsonify
 import aiohttp
 import urllib.parse
@@ -19,7 +18,6 @@ logger = logging.getLogger(__name__)
 # Config
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID', '0'))
-REQUIRED_ROLE_ID = int(os.getenv('REQUIRED_ROLE_ID', '0'))
 PORT = int(os.getenv('PORT', 5000))
 
 if not DISCORD_TOKEN:
@@ -38,11 +36,7 @@ start_time = time.time()
 
 @app.route('/')
 def home():
-    return jsonify({"status": "Bot is running!", "uptime": time.time() - start_time})
-
-@app.route('/health')
-def health():
-    return jsonify({"status": "healthy"})
+    return jsonify({"status": "Bot is running!"})
 
 @app.route('/ping')
 def ping():
@@ -51,27 +45,19 @@ def ping():
 def run_web_server():
     app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
-# ============ API SORGULAMA (DÜZELTİLDİ) ============
+# ============ API SORGULAMA ============
 def api_sorgula(url):
-    """API'ye sorgu gönderir"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'application/json'
         }
-        
-        logger.info(f"API sorgusu: {url}")
         response = requests.get(url, headers=headers, timeout=20)
-        logger.info(f"API yanıt kodu: {response.status_code}")
         
         if response.status_code == 200:
             return response.json()
-        else:
-            logger.error(f"API hata: {response.status_code} - {response.text[:200]}")
-            return None
-            
-    except Exception as e:
-        logger.error(f"API hatası: {e}")
+        return None
+    except:
         return None
 
 # ============ MODAL'LAR ============
@@ -102,56 +88,44 @@ class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
         soyad = self.soyad.value.strip()
         il = self.il.value.strip() if self.il.value else ""
         
-        # URL encode yap (Türkçe karakterler için)
         ad_encoded = urllib.parse.quote(ad)
         soyad_encoded = urllib.parse.quote(soyad)
-        il_encoded = urllib.parse.quote(il) if il else ""
         
-        # DOĞRU URL - sowixapi
         if il:
+            il_encoded = urllib.parse.quote(il)
             url = f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}"
         else:
             url = f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}"
         
         logger.info(f"Adsoyad sorgu URL: {url}")
-        
         data = api_sorgula(url)
         
-        if data and data.get("data"):
-            data_listesi = data.get("data")
-            if data_listesi and isinstance(data_listesi, list) and len(data_listesi) > 0:
-                kisi = data_listesi[0]
-                sonuc = "\n".join([f"🔹 {k}: {v}" for k, v in kisi.items()])
-                embed = discord.Embed(
-                    title="✅ Sorgu Sonucu",
-                    description=sonuc,
-                    color=discord.Color.green()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+        if data:
+            if isinstance(data, list) and len(data) > 0:
+                kisi = data[0]
+                mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
+                for anahtar, deger in kisi.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+                await interaction.followup.send(mesaj, ephemeral=True)
                 return
+            elif isinstance(data, dict) and data.get("data"):
+                veri_listesi = data.get("data")
+                if isinstance(veri_listesi, list) and len(veri_listesi) > 0:
+                    kisi = veri_listesi[0]
+                    mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
+                    for anahtar, deger in kisi.items():
+                        mesaj += f"**{anahtar}:** {deger}\n"
+                    await interaction.followup.send(mesaj, ephemeral=True)
+                    return
         
-        # İlk deneme başarısız olursa alternatif URL dene
-        alt_url = f"https://api.hexnox.pro/sowixapi/adsoyad.php?ad={ad_encoded}&soyad={soyad_encoded}"
-        if il:
-            alt_url += f"&il={il_encoded}"
-        
-        logger.info(f"Alternatif sorgu URL: {alt_url}")
-        data = api_sorgula(alt_url)
-        
-        if data and data.get("data"):
-            data_listesi = data.get("data")
-            if data_listesi and isinstance(data_listesi, list) and len(data_listesi) > 0:
-                kisi = data_listesi[0]
-                sonuc = "\n".join([f"🔹 {k}: {v}" for k, v in kisi.items()])
-                embed = discord.Embed(
-                    title="✅ Sorgu Sonucu",
-                    description=sonuc,
-                    color=discord.Color.green()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
-                return
-        
-        await interaction.followup.send("❌ Sonuç bulunamadı. Lütfen bilgileri kontrol edin.", ephemeral=True)
+        await interaction.followup.send(
+            "❌ **Sonuç bulunamadı!**\n\n"
+            f"👤 Ad: {ad}\n"
+            f"👤 Soyad: {soyad}\n"
+            f"📍 İl: {il if il else 'Belirtilmedi'}\n\n"
+            "Lütfen bilgileri kontrol edip tekrar deneyin.",
+            ephemeral=True
+        )
 
 class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
     tc = discord.ui.TextInput(
@@ -172,20 +146,25 @@ class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
         
         url = f"https://api.hexnox.pro/sowixapi/tcpro.php?tc={tc}"
         logger.info(f"TC Pro sorgu URL: {url}")
-        
         data = api_sorgula(url)
         
-        if data and data.get("data"):
-            data_content = data.get("data")
-            sonuc = "\n".join([f"🔹 {k}: {v}" for k, v in data_content.items()])
-            embed = discord.Embed(
-                title="✅ TC Pro Sonuç",
-                description=sonuc,
-                color=discord.Color.green()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        else:
-            await interaction.followup.send("❌ TC bulunamadı.", ephemeral=True)
+        if data:
+            if isinstance(data, dict) and data.get("data"):
+                icerik = data.get("data")
+                if isinstance(icerik, dict):
+                    mesaj = "**✅ TC Pro Sorgu Sonucu**\n\n"
+                    for anahtar, deger in icerik.items():
+                        mesaj += f"**{anahtar}:** {deger}\n"
+                    await interaction.followup.send(mesaj, ephemeral=True)
+                    return
+            elif isinstance(data, dict):
+                mesaj = "**✅ TC Pro Sorgu Sonucu**\n\n"
+                for anahtar, deger in data.items():
+                    mesaj += f"**{anahtar}:** {deger}\n"
+                await interaction.followup.send(mesaj, ephemeral=True)
+                return
+        
+        await interaction.followup.send("❌ TC bulunamadı. Lütfen TC'nizi kontrol edin.", ephemeral=True)
 
 class GSMModal(discord.ui.Modal, title='📱 GSM Detay Sorgu'):
     gsm = discord.ui.TextInput(
@@ -206,27 +185,23 @@ class GSMModal(discord.ui.Modal, title='📱 GSM Detay Sorgu'):
         
         url = f"https://api.hexnox.pro/sowixapi/gsmdetay.php?gsm={gsm}"
         logger.info(f"GSM detay sorgu URL: {url}")
-        
         data = api_sorgula(url)
         
         if data and data.get("success") and data.get("Data"):
-            d = data["Data"]
-            sonuc = f"""📱 GSM Detay Sorgu Sonucu
-
-👤 Ad Soyad: {d.get('AD', 'Yok')} {d.get('SOYAD', 'Yok')}
-🆔 TC: {d.get('TC', 'Yok')}
-🎂 Doğum Tarihi: {d.get('DOGUMTARIHI', 'Yok')}
-📍 Adres: {d.get('Ikametgah', 'Yok')}
-👩 Anne Adı: {d.get('ANNEADI', 'Yok')}
-👨 Baba Adı: {d.get('BABAADI', 'Yok')}"""
-            embed = discord.Embed(
-                title="📱 GSM Detay Sonucu",
-                description=sonuc,
-                color=discord.Color.blue()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        else:
-            await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+            d = data.get("Data")
+            if isinstance(d, dict):
+                mesaj = "**📱 GSM Detay Sorgu Sonucu**\n\n"
+                mesaj += f"**Ad Soyad:** {d.get('AD', 'Yok')} {d.get('SOYAD', 'Yok')}\n"
+                mesaj += f"**TC:** {d.get('TC', 'Yok')}\n"
+                mesaj += f"**Doğum Tarihi:** {d.get('DOGUMTARIHI', 'Yok')}\n"
+                mesaj += f"**Adres:** {d.get('Ikametgah', 'Yok')}\n"
+                mesaj += f"**Anne Adı:** {d.get('ANNEADI', 'Yok')}\n"
+                mesaj += f"**Baba Adı:** {d.get('BABAADI', 'Yok')}\n"
+                mesaj += f"**Cinsiyet:** {d.get('CINSIYET', 'Yok')}\n"
+                await interaction.followup.send(mesaj, ephemeral=True)
+                return
+        
+        await interaction.followup.send("❌ Sonuç bulunamadı. Lütfen GSM numarasını kontrol edin.", ephemeral=True)
 
 class PlakaModal(discord.ui.Modal, title='🚗 Plaka Sorgu'):
     plaka = discord.ui.TextInput(
@@ -246,27 +221,22 @@ class PlakaModal(discord.ui.Modal, title='🚗 Plaka Sorgu'):
         
         url = f"https://quantrexsystems.alwaysdata.net/diger/plaka.php?plaka={plaka}"
         logger.info(f"Plaka sorgu URL: {url}")
-        
         data = api_sorgula(url)
         
         if data and data.get("success") and data.get("Data"):
-            d = data["Data"]
-            sonuc = f"""🚗 Plaka Sorgu Sonucu
-
-Plaka: {d.get('plaka', 'N/A')}
-Borç Türü: {d.get('borcTuru', 'N/A')}
-İsim Soyisim: {d.get('Isimsoyisim', 'N/A')}
-T.C.: {d.get('Tc', 'N/A')}
-Yazılan Ceza: {d.get('YazilanCeza', 'N/A')}
-Toplam Ceza: {d.get('ToplamCeza', 'N/A')}"""
-            embed = discord.Embed(
-                title="🚗 Plaka Sorgu Sonucu",
-                description=sonuc,
-                color=discord.Color.orange()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        else:
-            await interaction.followup.send("❌ Veri bulunamadı.", ephemeral=True)
+            d = data.get("Data")
+            if isinstance(d, dict):
+                mesaj = "**🚗 Plaka Sorgu Sonucu**\n\n"
+                mesaj += f"**Plaka:** {d.get('plaka', 'N/A')}\n"
+                mesaj += f"**Borç Türü:** {d.get('borcTuru', 'N/A')}\n"
+                mesaj += f"**İsim Soyisim:** {d.get('Isimsoyisim', 'N/A')}\n"
+                mesaj += f"**T.C.:** {d.get('Tc', 'N/A')}\n"
+                mesaj += f"**Yazılan Ceza:** {d.get('YazilanCeza', 'N/A')}\n"
+                mesaj += f"**Toplam Ceza:** {d.get('ToplamCeza', 'N/A')}\n"
+                await interaction.followup.send(mesaj, ephemeral=True)
+                return
+        
+        await interaction.followup.send("❌ Veri bulunamadı. Lütfen plakayı kontrol edin.", ephemeral=True)
 
 # ============ VIEW'LAR ============
 class MainMenuView(discord.ui.View):
@@ -290,9 +260,7 @@ class MainMenuView(discord.ui.View):
             description="Bu bot çeşitli sorgulama işlemleri yapmanızı sağlar.",
             color=discord.Color.green()
         )
-        embed.add_field(name="📌 Sürüm", value="1.1.0", inline=True)
         embed.add_field(name="👤 Yapımcı", value="@alves0000", inline=True)
-        embed.add_field(name="⏱️ Çalışma Süresi", value=f"{int(time.time() - start_time)} saniye", inline=True)
         await interaction.response.edit_message(embed=embed, view=None)
 
 class KomutlarView(discord.ui.View):
