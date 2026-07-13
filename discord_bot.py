@@ -10,6 +10,7 @@ import time
 from flask import Flask, jsonify
 import aiohttp
 import urllib.parse
+import json
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -45,36 +46,22 @@ def ping():
 def run_web_server():
     app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
-# ============ API TEST ============
-def api_test_et(url):
-    """API'yi test et ve durumu döndür"""
-    try:
-        response = requests.get(url, timeout=10)
-        return {
-            "status": response.status_code,
-            "url": url,
-            "content": response.text[:200] if response.status_code == 200 else response.text[:100]
-        }
-    except Exception as e:
-        return {
-            "status": "hata",
-            "url": url,
-            "content": str(e)
-        }
-
-# ============ API SORGULAMA ============
+# ============ API SORGULAMA (DÜZELTİLDİ) ============
 def api_sorgula(url):
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'application/json'
         }
+        logger.info(f"API sorgusu: {url}")
         response = requests.get(url, headers=headers, timeout=20)
+        logger.info(f"Yanıt kodu: {response.status_code}")
         
         if response.status_code == 200:
             return response.json()
         return None
-    except:
+    except Exception as e:
+        logger.error(f"API hatası: {e}")
         return None
 
 # ============ MODAL'LAR ============
@@ -108,17 +95,16 @@ class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
         ad_encoded = urllib.parse.quote(ad)
         soyad_encoded = urllib.parse.quote(soyad)
         
-        # DENENECEK TÜM URL'LER
+        # DOĞRU URL'LER (sowixapi - düzeltildi)
         urls = []
         
         if il:
             il_encoded = urllib.parse.quote(il)
+            # Doğru yazım: sowixapi (sowiXAPI değil)
             urls.append(f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
-            urls.append(f"https://api.hexnox.pro/api/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
             urls.append(f"https://api.hexnox.pro/sowixapi/adsoyad.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
         else:
             urls.append(f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}")
-            urls.append(f"https://api.hexnox.pro/api/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}")
             urls.append(f"https://api.hexnox.pro/sowixapi/adsoyad.php?ad={ad_encoded}&soyad={soyad_encoded}")
         
         # Tüm URL'leri dene
@@ -127,6 +113,9 @@ class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
             data = api_sorgula(url)
             
             if data:
+                logger.info(f"Gelen data: {json.dumps(data, ensure_ascii=False)[:200]}")
+                
+                # data list olarak gelmiş
                 if isinstance(data, list) and len(data) > 0:
                     kisi = data[0]
                     mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
@@ -134,8 +123,21 @@ class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
                         mesaj += f"**{anahtar}:** {deger}\n"
                     await interaction.followup.send(mesaj, ephemeral=True)
                     return
+                
+                # data dict olarak gelmiş ve içinde data anahtarı var
                 elif isinstance(data, dict) and data.get("data"):
                     veri_listesi = data.get("data")
+                    if isinstance(veri_listesi, list) and len(veri_listesi) > 0:
+                        kisi = veri_listesi[0]
+                        mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
+                        for anahtar, deger in kisi.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        await interaction.followup.send(mesaj, ephemeral=True)
+                        return
+                
+                # data dict olarak gelmiş ve success true
+                elif isinstance(data, dict) and data.get("success") and data.get("Data"):
+                    veri_listesi = data.get("Data")
                     if isinstance(veri_listesi, list) and len(veri_listesi) > 0:
                         kisi = veri_listesi[0]
                         mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
@@ -171,7 +173,7 @@ class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
             await interaction.followup.send("❌ Geçerli bir 11 haneli TC giriniz.", ephemeral=True)
             return
         
-        # DENENECEK URL'LER
+        # DOĞRU URL'LER
         urls = [
             f"https://api.hexnox.pro/sowixapi/tcpro.php?tc={tc}",
             f"https://api.hexnox.pro/api/tcpro.php?tc={tc}"
@@ -182,6 +184,8 @@ class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
             data = api_sorgula(url)
             
             if data:
+                logger.info(f"TC Pro data: {json.dumps(data, ensure_ascii=False)[:200]}")
+                
                 if isinstance(data, dict) and data.get("data"):
                     icerik = data.get("data")
                     if isinstance(icerik, dict):
