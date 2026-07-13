@@ -48,37 +48,17 @@ def health():
 
 @app.route('/ping')
 def ping():
-    """Botun canlı olduğunu kontrol etmek için"""
     return jsonify({"status": "pong", "timestamp": time.time()})
 
 # ============ PING SİSTEMİ ============
-ping_counter = [0]  # Ping sayacı
+ping_counter = [0]
 start_time = time.time()
-
-async def keep_alive():
-    """Kendine periyodik ping atarak botun uyku moduna geçmesini engeller"""
-    bot_url = f"http://localhost:{PORT}/ping"
-    
-    while True:
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(bot_url, timeout=5) as response:
-                    if response.status == 200:
-                        ping_counter[0] += 1
-                        logger.info(f"✅ Ping başarılı! (Toplam: {ping_counter[0]})")
-                    else:
-                        logger.warning(f"⚠️ Ping başarısız! Status: {response.status}")
-        except Exception as e:
-            logger.error(f"❌ Ping hatası: {e}")
-        
-        # Her 8 dakikada bir ping at (Render free tier 15 dakika)
-        await asyncio.sleep(480)  # 8 dakika
 
 def run_web_server():
     """Flask web server'ı başlat"""
     app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
-# ============ VIEW'LAR (Buton Menüleri) ============
+# ============ VIEW'LAR ============
 class MainMenuView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -190,7 +170,6 @@ async def on_ready():
         synced = await bot.tree.sync()
         logger.info(f"{len(synced)} komut senkronize edildi.")
         
-        # Bot hazır olduğunda admin'e mesaj gönder
         if ADMIN_ID != 0:
             try:
                 admin = await bot.fetch_user(ADMIN_ID)
@@ -420,26 +399,38 @@ async def on_message(message: discord.Message):
         else:
             await message.channel.send("❌ Geçerli bir plaka giriniz.")
 
+# ============ PING GÖREVİ (DÜZELTİLDİ) ============
+async def keep_alive():
+    """Kendine periyodik ping atarak botun uyku moduna geçmesini engeller"""
+    bot_url = f"http://localhost:{PORT}/ping"
+    
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(bot_url, timeout=5) as response:
+                    if response.status == 200:
+                        ping_counter[0] += 1
+                        logger.info(f"✅ Ping başarılı! (Toplam: {ping_counter[0]})")
+                    else:
+                        logger.warning(f"⚠️ Ping başarısız! Status: {response.status}")
+        except Exception as e:
+            logger.error(f"❌ Ping hatası: {e}")
+        
+        await asyncio.sleep(480)
+
 # ============ BOT'U ÇALIŞTIR ============
 def run_bot():
-    """Bot'u ayrı bir thread'de çalıştır"""
     try:
         bot.run(DISCORD_TOKEN)
     except Exception as e:
         logger.error(f"Bot hatası: {e}")
 
 if __name__ == "__main__":
-    # Flask web server'ı thread'de başlat
+    # Web server'ı başlat
     web_thread = threading.Thread(target=run_web_server)
     web_thread.daemon = True
     web_thread.start()
     logger.info(f"🌐 Web server başlatıldı: http://localhost:{PORT}")
     
-    # Ping görevi
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    asyncio.create_task(keep_alive())
-    logger.info("🔄 Ping sistemi başlatıldı (her 8 dakikada bir)")
-    
-    # Bot'u başlat (ana thread)
+    # Bot'u başlat
     run_bot()
