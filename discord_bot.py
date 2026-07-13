@@ -162,10 +162,16 @@ class FreeKomutlarView(discord.ui.View):
         await interaction.response.send_message("🚗 Lütfen sorgulamak istediğiniz plaka numarasını girin:", ephemeral=True)
         user_states[interaction.user.id] = {"durum": "plaka_sor"}
     
-    @discord.ui.button(label="📞 İletişim", style=discord.ButtonStyle.link, url="https://t.me/alves0000")
+    @discord.ui.button(label="📞 İletişim", style=discord.ButtonStyle.secondary, custom_id="iletisim")
     async def iletisim_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Bu buton direkt Telegram'a yönlendirir
-        pass
+        embed = discord.Embed(
+            title="📞 İletişim Bilgileri",
+            description="Bot yapımcısı ile iletişime geçin:",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="👤 Yapımcı", value="@alves0000", inline=False)
+        embed.add_field(name="📱 Telegram", value="https://t.me/alves0000", inline=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
     
     @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_komutlar")
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -243,8 +249,7 @@ async def iletisim(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
     embed.add_field(name="👤 Yapımcı", value="@alves0000", inline=False)
-    embed.add_field(name="📱 Telegram", value="[t.me/alves0000](https://t.me/alves0000)", inline=True)
-    embed.add_field(name="🐦 Twitter", value="[twitter.com/alves0000](https://twitter.com/alves0000)", inline=True)
+    embed.add_field(name="📱 Telegram", value="https://t.me/alves0000", inline=True)
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ============ SORGU FONKSİYONLARI ============
