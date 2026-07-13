@@ -45,6 +45,23 @@ def ping():
 def run_web_server():
     app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
+# ============ API TEST ============
+def api_test_et(url):
+    """API'yi test et ve durumu döndür"""
+    try:
+        response = requests.get(url, timeout=10)
+        return {
+            "status": response.status_code,
+            "url": url,
+            "content": response.text[:200] if response.status_code == 200 else response.text[:100]
+        }
+    except Exception as e:
+        return {
+            "status": "hata",
+            "url": url,
+            "content": str(e)
+        }
+
 # ============ API SORGULAMA ============
 def api_sorgula(url):
     try:
@@ -91,39 +108,49 @@ class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
         ad_encoded = urllib.parse.quote(ad)
         soyad_encoded = urllib.parse.quote(soyad)
         
+        # DENENECEK TÜM URL'LER
+        urls = []
+        
         if il:
             il_encoded = urllib.parse.quote(il)
-            url = f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}"
+            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
+            urls.append(f"https://api.hexnox.pro/api/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
+            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyad.php?ad={ad_encoded}&soyad={soyad_encoded}&il={il_encoded}")
         else:
-            url = f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}"
+            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}")
+            urls.append(f"https://api.hexnox.pro/api/adsoyadilce.php?ad={ad_encoded}&soyad={soyad_encoded}")
+            urls.append(f"https://api.hexnox.pro/sowixapi/adsoyad.php?ad={ad_encoded}&soyad={soyad_encoded}")
         
-        logger.info(f"Adsoyad sorgu URL: {url}")
-        data = api_sorgula(url)
-        
-        if data:
-            if isinstance(data, list) and len(data) > 0:
-                kisi = data[0]
-                mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
-                for anahtar, deger in kisi.items():
-                    mesaj += f"**{anahtar}:** {deger}\n"
-                await interaction.followup.send(mesaj, ephemeral=True)
-                return
-            elif isinstance(data, dict) and data.get("data"):
-                veri_listesi = data.get("data")
-                if isinstance(veri_listesi, list) and len(veri_listesi) > 0:
-                    kisi = veri_listesi[0]
+        # Tüm URL'leri dene
+        for url in urls:
+            logger.info(f"Deneniyor: {url}")
+            data = api_sorgula(url)
+            
+            if data:
+                if isinstance(data, list) and len(data) > 0:
+                    kisi = data[0]
                     mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
                     for anahtar, deger in kisi.items():
                         mesaj += f"**{anahtar}:** {deger}\n"
                     await interaction.followup.send(mesaj, ephemeral=True)
                     return
+                elif isinstance(data, dict) and data.get("data"):
+                    veri_listesi = data.get("data")
+                    if isinstance(veri_listesi, list) and len(veri_listesi) > 0:
+                        kisi = veri_listesi[0]
+                        mesaj = "**✅ Sorgu Sonucu Bulundu!**\n\n"
+                        for anahtar, deger in kisi.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        await interaction.followup.send(mesaj, ephemeral=True)
+                        return
         
+        # Hiçbir URL çalışmadı
         await interaction.followup.send(
             "❌ **Sonuç bulunamadı!**\n\n"
             f"👤 Ad: {ad}\n"
             f"👤 Soyad: {soyad}\n"
             f"📍 İl: {il if il else 'Belirtilmedi'}\n\n"
-            "Lütfen bilgileri kontrol edip tekrar deneyin.",
+            "⚠️ API'ye bağlanılamadı. Lütfen daha sonra tekrar deneyin.",
             ephemeral=True
         )
 
@@ -144,25 +171,31 @@ class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
             await interaction.followup.send("❌ Geçerli bir 11 haneli TC giriniz.", ephemeral=True)
             return
         
-        url = f"https://api.hexnox.pro/sowixapi/tcpro.php?tc={tc}"
-        logger.info(f"TC Pro sorgu URL: {url}")
-        data = api_sorgula(url)
+        # DENENECEK URL'LER
+        urls = [
+            f"https://api.hexnox.pro/sowixapi/tcpro.php?tc={tc}",
+            f"https://api.hexnox.pro/api/tcpro.php?tc={tc}"
+        ]
         
-        if data:
-            if isinstance(data, dict) and data.get("data"):
-                icerik = data.get("data")
-                if isinstance(icerik, dict):
+        for url in urls:
+            logger.info(f"TC Pro deneniyor: {url}")
+            data = api_sorgula(url)
+            
+            if data:
+                if isinstance(data, dict) and data.get("data"):
+                    icerik = data.get("data")
+                    if isinstance(icerik, dict):
+                        mesaj = "**✅ TC Pro Sorgu Sonucu**\n\n"
+                        for anahtar, deger in icerik.items():
+                            mesaj += f"**{anahtar}:** {deger}\n"
+                        await interaction.followup.send(mesaj, ephemeral=True)
+                        return
+                elif isinstance(data, dict):
                     mesaj = "**✅ TC Pro Sorgu Sonucu**\n\n"
-                    for anahtar, deger in icerik.items():
+                    for anahtar, deger in data.items():
                         mesaj += f"**{anahtar}:** {deger}\n"
                     await interaction.followup.send(mesaj, ephemeral=True)
                     return
-            elif isinstance(data, dict):
-                mesaj = "**✅ TC Pro Sorgu Sonucu**\n\n"
-                for anahtar, deger in data.items():
-                    mesaj += f"**{anahtar}:** {deger}\n"
-                await interaction.followup.send(mesaj, ephemeral=True)
-                return
         
         await interaction.followup.send("❌ TC bulunamadı. Lütfen TC'nizi kontrol edin.", ephemeral=True)
 
