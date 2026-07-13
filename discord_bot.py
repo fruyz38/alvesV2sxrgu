@@ -57,7 +57,7 @@ start_time = time.time()
 def run_web_server():
     app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
 
-# ============ MODAL'LAR (Özel Mesaj Kutuları) ============
+# ============ MODAL'LAR ============
 class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
     ad = discord.ui.TextInput(
         label='Adınız',
@@ -81,19 +81,28 @@ class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         
-        ad = self.ad.value
-        soyad = self.soyad.value
-        il = self.il.value if self.il.value else ""
-        
-        await interaction.followup.send("🔍 Sorgulanıyor...", ephemeral=True)
+        ad = self.ad.value.strip()
+        soyad = self.soyad.value.strip()
+        il = self.il.value.strip() if self.il.value else ""
         
         try:
-            url = f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad}&soyad={soyad}&il={il}"
-            response = requests.get(url, timeout=10)
+            # URL oluştur
+            if il:
+                url = f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad}&soyad={soyad}&il={il}"
+            else:
+                url = f"https://api.hexnox.pro/sowixapi/adsoyadilce.php?ad={ad}&soyad={soyad}"
+            
+            logger.info(f"Adsoyad sorgu URL: {url}")
+            
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            
             json_data = response.json()
+            logger.info(f"Adsoyad cevap: {json_data}")
+            
             data_listesi = json_data.get("data")
             
-            if data_listesi and isinstance(data_listesi, list):
+            if data_listesi and isinstance(data_listesi, list) and len(data_listesi) > 0:
                 kisi = data_listesi[0]
                 sonuc = "\n".join([f"🔹 {k}: {v}" for k, v in kisi.items()])
                 embed = discord.Embed(
@@ -103,10 +112,16 @@ class AdSoyadModal(discord.ui.Modal, title='🧾 Ad Soyad Sorgu'):
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
-                await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+                await interaction.followup.send("❌ Sonuç bulunamadı. Lütfen bilgileri kontrol edin.", ephemeral=True)
+                
+        except requests.exceptions.Timeout:
+            await interaction.followup.send("⏰ Zaman aşımı. Lütfen daha sonra tekrar deneyin.", ephemeral=True)
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Adsoyad istek hatası: {e}")
+            await interaction.followup.send(f"⚠️ API bağlantı hatası. Lütfen tekrar deneyin.", ephemeral=True)
         except Exception as e:
             logger.error(f"Adsoyad sorgu hatası: {e}")
-            await interaction.followup.send(f"⚠️ Hata oluştu. Lütfen tekrar deneyin.", ephemeral=True)
+            await interaction.followup.send(f"⚠️ Beklenmeyen hata: {str(e)[:100]}", ephemeral=True)
 
 class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
     tc = discord.ui.TextInput(
@@ -119,20 +134,25 @@ class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        tc = self.tc.value
+        tc = self.tc.value.strip()
         
         if not tc.isdigit() or len(tc) != 11:
             await interaction.followup.send("❌ Geçerli bir 11 haneli TC giriniz.", ephemeral=True)
             return
         
-        await interaction.followup.send("🔍 TC Pro sorgulanıyor...", ephemeral=True)
-        
         try:
             url = f"https://api.hexnox.pro/sowixapi/tcpro.php?tc={tc}"
-            response = requests.get(url, timeout=10)
-            data = response.json().get("data")
-            if data:
-                sonuc = "\n".join([f"🔹 {k}: {v}" for k, v in data.items()])
+            logger.info(f"TC Pro sorgu URL: {url}")
+            
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            
+            data = response.json()
+            logger.info(f"TC Pro cevap: {data}")
+            
+            data_content = data.get("data")
+            if data_content:
+                sonuc = "\n".join([f"🔹 {k}: {v}" for k, v in data_content.items()])
                 embed = discord.Embed(
                     title="✅ TC Pro Sonuç",
                     description=sonuc,
@@ -141,6 +161,9 @@ class TCProModal(discord.ui.Modal, title='🆔 TC Pro Sorgu'):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.followup.send("❌ TC bulunamadı.", ephemeral=True)
+                
+        except requests.exceptions.Timeout:
+            await interaction.followup.send("⏰ Zaman aşımı. Lütfen daha sonra tekrar deneyin.", ephemeral=True)
         except Exception as e:
             logger.error(f"TC Pro sorgu hatası: {e}")
             await interaction.followup.send(f"⚠️ Hata oluştu. Lütfen tekrar deneyin.", ephemeral=True)
@@ -156,16 +179,22 @@ class GSMModal(discord.ui.Modal, title='📱 GSM Detay Sorgu'):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        gsm = self.gsm.value
+        gsm = self.gsm.value.strip()
         
         if not gsm.isdigit() or len(gsm) != 10:
             await interaction.followup.send("❌ Geçerli bir GSM numarası giriniz.", ephemeral=True)
             return
         
-        url = f"https://api.hexnox.pro/sowixapi/gsmdetay.php?gsm={gsm}"
         try:
-            response = requests.get(url, timeout=10)
+            url = f"https://api.hexnox.pro/sowixapi/gsmdetay.php?gsm={gsm}"
+            logger.info(f"GSM detay sorgu URL: {url}")
+            
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            
             data = response.json()
+            logger.info(f"GSM detay cevap: {data}")
+            
             if data.get("success") and data.get("Data"):
                 d = data["Data"]
                 sonuc = f"""📱 GSM Detay Sorgu Sonucu
@@ -184,6 +213,9 @@ class GSMModal(discord.ui.Modal, title='📱 GSM Detay Sorgu'):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.followup.send("❌ Sonuç bulunamadı.", ephemeral=True)
+                
+        except requests.exceptions.Timeout:
+            await interaction.followup.send("⏰ Zaman aşımı. Lütfen daha sonra tekrar deneyin.", ephemeral=True)
         except Exception as e:
             logger.error(f"GSM detay sorgu hatası: {e}")
             await interaction.followup.send(f"⚠️ Hata oluştu. Lütfen tekrar deneyin.", ephemeral=True)
@@ -198,16 +230,22 @@ class PlakaModal(discord.ui.Modal, title='🚗 Plaka Sorgu'):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        plaka = self.plaka.value.upper()
+        plaka = self.plaka.value.strip().upper()
         
         if not plaka.isalnum() or len(plaka) > 8:
             await interaction.followup.send("❌ Geçerli bir plaka giriniz.", ephemeral=True)
             return
         
-        url = f"https://quantrexsystems.alwaysdata.net/diger/plaka.php?plaka={plaka}"
         try:
-            response = requests.get(url, timeout=10)
+            url = f"https://quantrexsystems.alwaysdata.net/diger/plaka.php?plaka={plaka}"
+            logger.info(f"Plaka sorgu URL: {url}")
+            
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            
             data = response.json()
+            logger.info(f"Plaka cevap: {data}")
+            
             if data.get("success") and data.get("Data"):
                 d = data["Data"]
                 sonuc = f"""🚗 Plaka Sorgu Sonucu
@@ -226,11 +264,14 @@ Toplam Ceza: {d.get('ToplamCeza', 'N/A')}"""
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.followup.send("❌ Veri bulunamadı.", ephemeral=True)
+                
+        except requests.exceptions.Timeout:
+            await interaction.followup.send("⏰ Zaman aşımı. Lütfen daha sonra tekrar deneyin.", ephemeral=True)
         except Exception as e:
             logger.error(f"Plaka sorgu hatası: {e}")
             await interaction.followup.send(f"❌ Hata oluştu. Lütfen tekrar deneyin.", ephemeral=True)
 
-# ============ VIEW'LAR (Buton Menüleri) ============
+# ============ VIEW'LAR ============
 class MainMenuView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
