@@ -364,12 +364,12 @@ class MainMenuView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
     
-    @discord.ui.button(label="📂 Komutlar", style=discord.ButtonStyle.primary, custom_id="komutlar")
-    async def komutlar_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="📂 Sorgu Paneli", style=discord.ButtonStyle.primary, custom_id="sorgu_paneli")
+    async def sorgu_paneli(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = KomutlarView()
         embed = discord.Embed(
-            title="⚙️ Komut Türü Seçin",
-            description="Hangi tür komutları kullanmak istersiniz?",
+            title="📂 Sorgu Paneli",
+            description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
         await interaction.response.edit_message(embed=embed, view=view)
@@ -421,12 +421,13 @@ class KomutlarView(discord.ui.View):
     
     @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_ana")
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = MainMenuView()
         embed = discord.Embed(
             title="👋 Hoş Geldiniz!",
             description="Aşağıdaki butonlardan birini seçin:",
             color=discord.Color.blue()
         )
-        await interaction.response.edit_message(embed=embed, view=MainMenuView())
+        await interaction.response.edit_message(embed=embed, view=view)
 
 class TwitterView(discord.ui.View):
     def __init__(self):
@@ -446,12 +447,13 @@ class TwitterView(discord.ui.View):
     
     @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_komutlar")
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = KomutlarView()
         embed = discord.Embed(
-            title="⚙️ Komut Türü Seçin",
-            description="Hangi tür komutları kullanmak istersiniz?",
+            title="📂 Sorgu Paneli",
+            description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
-        await interaction.response.edit_message(embed=embed, view=KomutlarView())
+        await interaction.response.edit_message(embed=embed, view=view)
 
 class DiscordView(discord.ui.View):
     def __init__(self):
@@ -463,12 +465,13 @@ class DiscordView(discord.ui.View):
     
     @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_komutlar")
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = KomutlarView()
         embed = discord.Embed(
-            title="⚙️ Komut Türü Seçin",
-            description="Hangi tür komutları kullanmak istersiniz?",
+            title="📂 Sorgu Paneli",
+            description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
-        await interaction.response.edit_message(embed=embed, view=KomutlarView())
+        await interaction.response.edit_message(embed=embed, view=view)
 
 class InstagramView(discord.ui.View):
     def __init__(self):
@@ -500,12 +503,13 @@ class InstagramView(discord.ui.View):
     
     @discord.ui.button(label="🔙 Geri", style=discord.ButtonStyle.secondary, custom_id="geri_komutlar")
     async def geri_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = KomutlarView()
         embed = discord.Embed(
-            title="⚙️ Komut Türü Seçin",
-            description="Hangi tür komutları kullanmak istersiniz?",
+            title="📂 Sorgu Paneli",
+            description="Sorgulamak istediğiniz platformu seçin:",
             color=discord.Color.blue()
         )
-        await interaction.response.edit_message(embed=embed, view=KomutlarView())
+        await interaction.response.edit_message(embed=embed, view=view)
 
 # ============ KOMUTLAR ============
 @bot.event
@@ -532,7 +536,7 @@ async def start(interaction: discord.Interaction):
         description="Aşağıdaki butonlardan birini seçin:",
         color=discord.Color.blue()
     )
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    await interaction.response.send_message(embed=embed, view=view)
 
 @bot.tree.command(name="ping", description="Botun gecikme süresini göster")
 async def ping(interaction: discord.Interaction):
